@@ -6,12 +6,11 @@ from scipy import special
 from scipy.optimize import minimize, shgo
 
 t = 0.5 # Arbitrary time units
-N = 14 # Number of Fourier coefficients
+N = 12 # Number of Fourier coefficients
 param = 1 # Amount of Squeezing
 
 # Optimal parameters for N = 21 based on the paper
 phi_ans = [-0.353282, 0.902028, -0.518804, -0.447977, 0.447404, 0.231963, -0.307409, -0.191352, 0.354135, 0.141061, -0.544457, -0.310069, 0.685625, 0.623302, -0.144266, -0.808851, -0.102101, -0.682909, 1.02161, 0.534188, -0.54781]
-phi = [np.pi/2 for i in range(N + 1)]
 
 #%%
 # Find all possible combinations of [+1, -1] for lists of length N.
@@ -44,7 +43,7 @@ def terms(j, sj_list, phi_list):
 
     return numerator/denominator
 
-def func(phi_list, full_list):
+def func(phi_list, full_list, displacement):
     components = []
     exponents = []
 
@@ -54,7 +53,7 @@ def func(phi_list, full_list):
         for i in range(len(ls) - 1):
             #print(terms(i, ls, phi_list))
             inter.append(terms(i, ls, phi_list))
-        exponents.append(np.sum(ls[1:-1])+3.5)
+        exponents.append(np.sum(ls[1:-1]) + displacement)
         components.append(np.prod(inter))
 
     approx_integral = [airy(t, i) for i in exponents]
@@ -70,10 +69,14 @@ def func(phi_list, full_list):
 #print(func(phi_ans, full_list))
 #print(func([np.pi/4 for i in range(N+1)], full_list))
 
-root = minimize(func, [np.random.uniform(-np.pi/2, np.pi/2) for i in range(N+1)], args = (full_list))
-print(root.message)
-print("Solution for Optimal Angles: ", root.x)
-print("Calculated infidelity: ", np.round(func(root.x, full_list), 3))
+displacement = [0, 2, 4, 6]
+
+for amnt in displacement:
+    root = minimize(func, [np.random.uniform(-np.pi/2, np.pi/2) for i in range(N+1)], args = (full_list, displacement))
+    print(root.message)
+    print("For Displacement = ", np.round(amnt, 3))
+    print("Solution for Optimal Angles: ", np.array(root.x))
+    print("Calculated infidelity: ", np.round(func(root.x, full_list, amnt), 3), '\n')
 
 # %%
 # To Show Error 1 
@@ -96,7 +99,7 @@ for k in trial:
 plt.plot(trial, res_exact, label = 'Numerical Integration')
 plt.plot(trial, res_approx, label = 'Approximate Airy Function with 1/np.sqrt(pi)')
 plt.legend() """
-# %%
+""" # %%
 # Generate Fourier Coefficients
 import scipy.integrate as integrate
 
@@ -108,16 +111,17 @@ def coeff(time, index):
     res = np.real(integrate.quad(integrand, -np.pi/time, np.pi/time, args = (index, time))[0])
     return norm * res
 
-time = [0.1 * i for i in range(1, 20)]
+check_N = 20
+check_time = 0.5
 
-check = []
-for i in range(100):
-    check.append(coeff(0.42, i))
+val_coeff = []
+index_coeff = np.arange(-check_N/2, (check_N/2) + 1, 1)
+for i in index_coeff:
+    val_coeff.append(coeff(check_time, i))
 
-plt.plot(np.absolute(check), 'x-')
-plt.hlines(y = np.absolute(check[10]), xmin = 0, xmax = 100, color = 'r')
+plt.plot(index_coeff, np.absolute(val_coeff), 'x-', label = "N = " + str(check_N) + ", Time = " + str(np.round(check_time, 3)))
 plt.ylabel("Fourier Amplitude (Absolute Value)")
 plt.xlabel("Fourier Index")
-plt.title("Time = 0.42")
-
+plt.legend()
+plt.show() """
 # %%
