@@ -5,6 +5,10 @@ import matplotlib.pyplot as plt
 
 from qutip import *
 
+options = Options()
+options.num_cpus = 5
+options.nsteps = 100000
+
 # Max Fock state for calculations
 N = 20
 
@@ -27,9 +31,21 @@ def displacement(rsb_phase = 0, bsb_phase = 0):
     return [RSB, RSBp, BSB, BSBp]
 
 #%%
-#psi0 = tensor(ket2dm(basis(2,1)), ket2dm(basis(N, 1))) 
-psi0 = tensor(ket2dm(basis(2,1)), coherent_dm(N, 0))
-psi1 = rotation(np.pi/2) * psi0
+# Random Testing States
+#psi0 = tensor(ket2dm(basis(2,1)), ket2dm(basis(N, 3))) 
+#psi0 = tensor(ket2dm(basis(2,1)), coherent_dm(N, 5))
+
+# Prepare Cubic Phase State
+ideal_x = position(N)
+ideal_H = ideal_x**3
+ideal_psi0 = basis(N) # Initialise in |n=0> state
+t = [0.0, 1.0]     # We don't care about the internal dynamics, just the start and end results
+ideal_output = mesolve(H = ideal_H, rho0 = ideal_psi0, tlist = t, options = options)
+ideal_rho = ideal_output.states[-1]
+ideal_rho = tensor(basis(2,0), ideal_rho)
+
+# Perform Chr Function Measurement
+psi1 = rotation(np.pi/2) * ideal_rho
 
 nGrid = 100
 amp = np.linspace(0, 3, nGrid) # Amplitude of displacement operation
@@ -47,7 +63,7 @@ for i in range(len(bsb_phase)):
         state = output.states[-1]
 
         ion_state = ptrace(state, 0)
-        excited_state = np.absolute(ion_state[1, 1])
+        excited_state = np.absolute(expect(sigmaz(), ion_state))
 
         real = np.cos(bsb_phase[i]/2)
         img = np.sin(bsb_phase[i]/2)
@@ -58,11 +74,9 @@ for i in range(len(bsb_phase)):
         loc_x = np.where(check_real == min(check_real))[0]
         loc_y = np.where(check_img == min(check_img))[0]
 
-        #print(real, loc_x, img, loc_y, excited_state)
-
-        Z[loc_x, loc_y] = excited_state
-        
-levels = np.linspace(0,1,101)
+        Z[loc_x, loc_y] = excited_state#
+#%%        
+levels = np.linspace(-0.01, 1.01, 101)
 
 h = plt.contourf(x, y, Z, 50, levels = levels)
 plt.axis('scaled')
