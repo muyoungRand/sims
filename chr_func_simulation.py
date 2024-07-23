@@ -33,17 +33,21 @@ def displacement(rsb_phase = 0, bsb_phase = 0):
 # Test States
 #psi0 = tensor(ket2dm(basis(2,1)), ket2dm(basis(N, 3))) 
 #psi0 = tensor(ket2dm(basis(2,1)), coherent_dm(N, 5))
+psi0 = basis(N, 1)
+psi1 = displace(N, 2.0) * psi0
+psi2 = tensor(basis(2, 0), psi1)
+psi0 = psi2
 
 # Cubic Phase State
-ideal_x = position(N)
+""" ideal_x = position(N)
 ideal_H = ideal_x**3
 ideal_psi0 = basis(N)
 ideal_output = mesolve(H = ideal_H, rho0 = ideal_psi0, tlist = [0.0, 1.0], options = options)
-ideal_rho = ideal_output.states[-1] # Cubic Phase State with Sqz Param = 1
+ideal_rho = ideal_output.states[-1] # Cubic Phase State with Sqz Param = 1 
+psi0 = tensor(basis(2,0), ideal_rho) """
 
 # Perform Chr Function Measurement
-psi0 = tensor(basis(2,0), ideal_rho) # Add the spin part (assumed to be in ground state)
-psi1 = rotation(np.pi/2) * psi0
+psi1 = rotation(0) * psi0
 
 nGrid = 100
 amp = np.linspace(0, 3, nGrid) # Amplitude of displacement operation
