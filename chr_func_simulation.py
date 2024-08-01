@@ -1,6 +1,8 @@
 #%%
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.cm import ScalarMappable
+from matplotlib import cm
 
 from qutip import *
 
@@ -14,7 +16,7 @@ N = 20
 # Operators
 def rotation(angle):
     part1 = np.cos(angle/2) * tensor(qeye(2), qeye(N))
-    part2 = -1j * np.sin(angle/2) * tensor(sigmay(), qeye(N))
+    part2 = -1j * np.sin(angle/2) * tensor(sigmax(), qeye(N))
     return part1 + part2
 
 a = tensor(qeye(2), destroy(N))
@@ -29,89 +31,115 @@ def displacement(rsb_phase = 0, bsb_phase = 0):
 
     return [RSB, RSBp, BSB, BSBp]
 
-#%%
 # Test States
-#psi0 = tensor(ket2dm(basis(2,1)), ket2dm(basis(N, 3))) 
+#psi0 = tensor(ket2dm(basis(2, 0)), ket2dm(basis(N, 1))) 
 #psi0 = tensor(ket2dm(basis(2,1)), coherent_dm(N, 5))
-psi0 = basis(N, 1)
-psi1 = displace(N, 2.0) * psi0
-psi2 = tensor(basis(2, 0), psi1)
-psi0 = psi2
 
 # Cubic Phase State
-""" ideal_x = position(N)
+ideal_x = position(N)
 ideal_H = ideal_x**3
-ideal_psi0 = basis(N)
+ideal_psi0 = basis(N, 0)
 ideal_output = mesolve(H = ideal_H, rho0 = ideal_psi0, tlist = [0.0, 1.0], options = options)
 ideal_rho = ideal_output.states[-1] # Cubic Phase State with Sqz Param = 1 
-psi0 = tensor(basis(2,0), ideal_rho) """
+psi0 = tensor(basis(2, 0), ideal_rho)
 
-# Perform Chr Function Measurement
+psi0 = tensor(basis(2, 0), basis(N, 1))
+
+# Check if generated state is correct -> Plot Wigner function
+""" xvec = np.linspace(-5,5,200)
+W = wigner(ideal_rho, xvec, xvec)
+fig, axes = plt.subplots(1, 1, figsize=(6,6))
+cont0 = axes.contourf(xvec, xvec, W, 100, cmap=cm.RdBu)
+fig.colorbar(cont0)
+plt.show()
+ """
+
+# For plotting
+x_data = np.linspace(0.1, 400, 101)
+radius = [i * 0.006184 for i in x_data]
+
+theta = np.linspace(-180, 180, 101)
+theta = [i * np.pi/180 for i in theta]
+
+# For plotting & Storing Data
+theta_array = [theta for i in range(len(radius))]
+radius_array = [[radius[j] for i in range(len(theta))] for j in range(len(radius))]
+
+nColumns = len(theta)
+nRows = len(radius)
+
+plot_data = np.zeros((nRows, nColumns))
+
+# Plot settings
+vmin = -1
+vmax = 1
+levels = 20
+level_boundaries = np.linspace(vmin, vmax, levels + 1)
+
+#%%
+# ---------------------- Real Part ---------------------- #
 psi1 = rotation(0) * psi0
 
-nGrid = 100
-amp = np.linspace(0, 3, nGrid) # Amplitude of displacement operation
+plot_data = np.zeros((nRows, nColumns))
 
-#%%
-# Upper quadrant
-x = np.linspace(0, 3, nGrid)
-y = np.linspace(0, 3, nGrid)
-Z = np.zeros((nGrid, nGrid))
+res = []
 
-bsb_phase = np.linspace(0, np.pi, nGrid)
-
-for i in range(len(bsb_phase)):    
-    for j in range(len(amp)):
-        output = mesolve(H = displacement(0, bsb_phase[i]), rho0 = psi1, tlist = [0, amp[j]])
+for phase in theta:
+    for amp in radius:
+        output = mesolve(H = displacement(0, phase), rho0 = psi1, tlist = [0, amp])
         state = output.states[-1]
-
+        
         ion_state = ptrace(state, 0)
-        excited_state = 1 - 2*np.absolute(expect(sigmaz(), ion_state))
+        proj = expect(sigmaz(), ion_state)
 
-        real = np.cos(bsb_phase[i]/2)
-        img = np.sin(bsb_phase[i]/2)
+        res.append(proj)
 
-        check_real = np.absolute(x - amp[j]*real)
-        check_img = np.absolute(x - amp[j]*img)
+counter = 0
 
-        loc_x = np.where(check_real == min(check_real))[0]
-        loc_y = np.where(check_img == min(check_img))[0]
+for i in range(len(res)):
+    if i > 1 and i % nRows == 0:
+        counter += 1
 
-        Z[loc_x, loc_y] = excited_state
+    plot_data[i - counter * nRows][counter] = res[i]
 
+fig, ax = plt.subplots(subplot_kw = dict(projection='polar'), figsize = (10, 10))
+ax.set_theta_zero_location("E")
+ax.set_theta_direction(1)
+
+cax = ax.contourf(theta, radius, plot_data)
+cbar = fig.colorbar(cax)
+fig.suptitle("Real Part", size = 'xx-large')
 #%%
-# Lower quadrant
-x = np.linspace(0, 3, nGrid)
-yneg = np.linspace(0, -3, nGrid)
-Zneg = np.zeros((nGrid, nGrid))
+""" # ---------------------- Imaginary Part ---------------------- #
+psi1 = rotation(np.pi/2) * psi0
 
-bsb_phase = np.linspace(0, -np.pi, nGrid)
+plot_data = np.zeros((nRows, nColumns))
 
-for i in range(len(bsb_phase)):    
-    for j in range(len(amp)):
-        output = mesolve(H = displacement(0, bsb_phase[i]), rho0 = psi1, tlist = [0, amp[j]])
-        state = output.states[-1]
+res = []
 
+for phase in theta:
+    for amp in radius:
+        output = mesolve(H = displacement(0, phase), rho0 = psi1, tlist = [0, amp])
+        state = output.states[1]
+        
         ion_state = ptrace(state, 0)
-        excited_state = 1 - 2*np.absolute(expect(sigmaz(), ion_state))
+        proj = np.absolute(expect(sigmaz(), ion_state))
 
-        real = np.cos(bsb_phase[i]/2)
-        img = np.sin(bsb_phase[i]/2)
+        res.append(proj)
 
-        check_real = np.absolute(x - amp[j]*real)
-        check_img = np.absolute(amp[j]*img - yneg)
+counter = 0
 
-        loc_x = np.where(check_real == min(check_real))[0]
-        loc_y = np.where(check_img == min(check_img))[0]
+for i in range(len(res)):
+    if i > 1 and i % nRows == 0:
+        counter += 1
 
-        Zneg[loc_x, loc_y] = excited_state
-#%%       
-# Plot everything together 
-levels = np.linspace(-1, 1, 101)
+    plot_data[i - counter * nRows][counter] = res[i]
 
-h = plt.contourf(x, np.linspace(3, -3, 2*nGrid), np.vstack((np.flip(Z,0), Zneg)), 50, levels = levels)
-plt.axis('scaled')
-plt.colorbar()
-plt.show()
+fig, ax = plt.subplots(subplot_kw = dict(projection='polar'), figsize = (10, 10))
+ax.set_theta_zero_location("E")
+ax.set_theta_direction(1)
 
+cax = ax.contourf(theta, radius, plot_data)
+cbar = fig.colorbar(cax)
+fig.suptitle("Imaginary Part", size = 'xx-large') """
 # %%
