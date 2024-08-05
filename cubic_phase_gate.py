@@ -57,7 +57,7 @@ Part 2 - Simulation of Ideal Cubic Phase State
 
 # ---------- Ideal Cubic Phase Gate ---------- #
 ideal_x = position(nMax)
-ideal_H = ideal_x**3
+ideal_H = - ideal_x**3
 
 ideal_psi0 = basis(nMax) # Initialise in |n=0> state
 t = [0.0, 1.0]     # We don't care about the internal dynamics, just the start and end results
@@ -76,8 +76,8 @@ def pulse(initial_state, angle, pulse_time, final = False):
     """
     t = [0.0, 1.0]
 
-    H1 = - angle * sY
-    H2 = - pulse_time * sZ * x
+    H1 = angle * sY
+    H2 = pulse_time * sZ * x
 
     if final == False:
         output = mesolve(H = H1, rho0 = initial_state, tlist = t, options = options)
@@ -171,8 +171,8 @@ def hamiltonian(order, ld_param, sideband):
 def pulse_ion(initial_state, angle, pulse_time, final = False):
     t = [0.0, 1.0]
 
-    H1 = - angle * sY
-    H2 = - pulse_time * (RSB_H + BSB_H) # Displacement operation for trapped ions
+    H1 = angle * sY
+    H2 = pulse_time * (RSB_H + BSB_H) # Displacement operation for trapped ions
     
     if final == False:
         output = mesolve(H = H1, rho0 = initial_state, tlist = t, options = options)
@@ -248,7 +248,7 @@ fig.colorbar(im, ax = ax.ravel().tolist())
 """
 Part 6 - Process Tomography
 """
-fig, ax = plt.subplots(4, 5, figsize = (30, 30))
+""" fig, ax = plt.subplots(4, 5, figsize = (30, 30))
 row_counter = 0
 column_counter = 0
 
@@ -286,9 +286,10 @@ ax[1].plot(Pn, 'x-')
 ax[1].set_title("nBar/Step")
 
 fig.tight_layout()
-plt.show()
+plt.show() """
 # %%
 fig, ax = plt.subplots(4, 5, figsize = (30, 30))
+fig2, ax2 = plt.subplots(4, 5, figsize = (30, 30))
 row_counter = 0
 column_counter = 0
 
@@ -303,19 +304,22 @@ for index in range(len(ion_states)):
     mot_W = wigner(mot_state, xvec, xvec)
     ax[row_counter, column_counter].contourf(xvec, xvec, mot_W, 100, norm=mpl.colors.Normalize(-.25,.25), cmap=plt.get_cmap('RdBu'))
     
+    mot_diag = np.absolute(np.diag(mot_state))
+    mot_nBar = np.sum([i * mot_diag[i] for i in range(len(mot_diag))])
+    
+    ax2[row_counter, column_counter].bar([i for i in range(20)], mot_diag[:20])
+    
     if column_counter < 4:
         column_counter += 1
     elif column_counter == 4:
         column_counter = 0
         row_counter += 1
     
-    mot_diag = np.absolute(np.diag(mot_state))
-    mot_nBar = np.sum([i * mot_diag[i] for i in range(len(mot_diag))])
-    
     Pe.append(int_state)
     Pn.append(mot_nBar)
     
 fig.tight_layout()
+fig2.tight_layout()
 plt.show()
     
 fig, ax = plt.subplots(1, 2, figsize = (15, 5))
@@ -328,10 +332,10 @@ ax[1].set_title("nBar/Step")
 fig.tight_layout()
 plt.show()
 # %%
-"""
+""" 
 Part 7 - Process Tomography, Characteristic Function
 """
-# For plotting
+""" # For plotting
 x_data = np.linspace(0.1, 400, 101)
 radius = [i * 0.006184 for i in x_data]
 
@@ -403,5 +407,5 @@ for index in range(len(ion_states)):
         row_counter += 1
 
 fig.tight_layout()
-plt.show()
+plt.show()  """
 # %%
