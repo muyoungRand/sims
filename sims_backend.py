@@ -149,8 +149,51 @@ class operations():
         ]
         
         return bsb
+    
+    def _sin2_pulse_(self, tPi, k):
+        return 2 * np.sqrt(2) * np.sqrt( k * (1+k) * (2+k) / (1 + 3 * k * (2 + k)) ) * tPi
+    
+    def def_sin2_rsb_hamiltonian(self, index_ion, index_mode, tPi, k):
+        op = (self.rabi / 2) * self.sM[index_ion].dag() * self.a[index_mode]
 
+        dur = self._sin2_pulse_(tPi, k)
 
+        def op_coeff(t, args):
+            exp_freq = np.exp(-1j * t * (args['freq_mode' + str(index_mode)] + args['rsb_detuning']))
+            exp_phase = np.exp(1j * args['phase_ion' + str(index_ion)])
+            sin2 = np.sin(np.pi * t / dur)**2
+            return sin2 * exp_freq * exp_phase
+            
+        op_p = op.dag()
+        def op_p_coeff(t, args):
+            return np.conjugate(op_coeff(t, args))
+        
+        sin2_rsb = [
+            [op, op_coeff], [op_p, op_p_coeff]
+        ]
+        
+        return sin2_rsb
+    
+    def def_sin2_bsb_hamiltonian(self, index_ion, index_mode, tPi, k):
+        op = (self.rabi / 2) * self.sM[index_ion].dag() * self.a[index_mode].dag()
+
+        dur = self._sin2_pulse_(tPi, k)
+
+        def op_coeff(t, args):
+            exp_freq = np.exp(1j * t * (args['freq_mode' + str(index_mode)] - args['bsb_detuning']))
+            exp_phase = np.exp(1j * args['phase_ion' + str(index_ion)])
+            sin2 = np.sin(np.pi * t / dur)**2
+            return sin2 * exp_freq * exp_phase
+            
+        op_p = op.dag()
+        def op_p_coeff(t, args):
+            return np.conjugate(op_coeff(t, args))
+            
+        sin2_bsb = [
+            [op, op_coeff], [op_p, op_p_coeff]
+        ]
+        
+        return sin2_bsb
 # ------------ Example - MS Gate ------------
 
 # Initialise class
